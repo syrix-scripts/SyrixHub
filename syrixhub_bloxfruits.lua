@@ -1,473 +1,529 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- SyrixHub UI Script
+-- Created by @syrixscripts
+-- Safe for testing in controlled environments
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:WaitForChild("Humanoid")
+local player = Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SyrixHub"
+screenGui.Parent = CoreGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-LocalPlayer.CharacterAdded:Connect(function(char)
-   Character = char
-   HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
-   Humanoid = char:WaitForChild("Humanoid")
+-- Prevent multiple instances
+if CoreGui:FindFirstChild("SyrixHub") then
+    CoreGui:FindFirstChild("SyrixHub"):Destroy()
+end
+
+-- Discord invite link
+local DISCORD_INVITE = "https://discord.gg/9aGQqc45Ph"
+
+-- ============================================
+-- LOADING SCREEN (HoHo Hub style inspiration)
+-- ============================================
+
+local loadingFrame = Instance.new("Frame")
+loadingFrame.Name = "LoadingScreen"
+loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+loadingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+loadingFrame.BackgroundTransparency = 1
+loadingFrame.Parent = screenGui
+
+local loadingImage = Instance.new("ImageLabel")
+loadingImage.Name = "LoadingImage"
+loadingImage.Size = UDim2.new(0, 200, 0, 200)
+loadingImage.Position = UDim2.new(0.5, -100, 0.5, -100)
+loadingImage.BackgroundTransparency = 1
+loadingImage.Image = "https://cdn.discordapp.com/attachments/1504163901405790334/1519984324479553557/file_0000000094287230b84f1debaaa5c579.png?ex=6a3f8b36&is=6a3e39b6&hm=688860a6df6dce262765da76e70cda8e154c3255318c2b99bd3dc96d8a7b27a2&"
+loadingImage.ImageTransparency = 1
+loadingImage.ScaleType = Enum.ScaleType.Fit
+loadingImage.Parent = loadingFrame
+
+-- Loading animation sequence
+task.spawn(function()
+    -- Fade in
+    local fadeIn = TweenService:Create(loadingImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0})
+    fadeIn:Play()
+    fadeIn.Completed:Wait()
+    
+    -- Zoom and slide up
+    local zoomIn = TweenService:Create(loadingImage, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 250, 0, 250), Position = UDim2.new(0.5, -125, 0.5, -125)})
+    zoomIn:Play()
+    zoomIn.Completed:Wait()
+    
+    wait(0.3)
+    
+    local slideUp = TweenService:Create(loadingImage, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, -125, -0.3, 0), ImageTransparency = 0.5})
+    slideUp:Play()
+    slideUp.Completed:Wait()
+    
+    -- Fade out loading screen
+    local fadeOut = TweenService:Create(loadingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
+    
+    loadingFrame:Destroy()
 end)
 
-local State = {
-   AutoFarmLevel  = false,
-   AutoTakeQuest  = false,
-   AutoBones      = false,
-   AutoV3         = false,
-   AutoV4         = false,
-   AutoObservation= false,
-   AutoFarm       = false,
-}
+-- Wait for loading to complete
+wait(2.5)
 
--- ==================== WINDOW ====================
-local Window = Rayfield:CreateWindow({
-   Name = "SyrixHub - Bloxfruits",
-   LoadingTitle = "SyrixHub - Bloxfruits",
-   LoadingSubtitle = "by @syrixscripts",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "SyrixHub",
-      FileName = "BloxfruitsConfig"
-   },
-   Discord = {
-      Enabled = true,
-      Invite = "Tds6abWdK",
-      RememberJoins = true
-   },
-   KeySystem = false,
+-- ============================================
+-- NOTIFICATION SYSTEM
+-- ============================================
+
+local notificationFrame = Instance.new("Frame")
+notificationFrame.Name = "Notification"
+notificationFrame.Size = UDim2.new(0, 300, 0, 60)
+notificationFrame.Position = UDim2.new(1, -320, 0, 20)
+notificationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+notificationFrame.BackgroundTransparency = 1
+notificationFrame.BorderSizePixel = 0
+notificationFrame.ClipsDescendants = true
+notificationFrame.Parent = screenGui
+
+-- Rounded corners for notification
+local notifCorner = Instance.new("UICorner")
+notifCorner.CornerRadius = UDim.new(0, 12)
+notifCorner.Parent = notificationFrame
+
+local notifStroke = Instance.new("UIStroke")
+notifStroke.Color = Color3.fromRGB(100, 100, 255)
+notifStroke.Thickness = 1.5
+notifStroke.Transparency = 0.5
+notifStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+notifStroke.Parent = notificationFrame
+
+local notifTitle = Instance.new("TextLabel")
+notifTitle.Name = "Title"
+notifTitle.Size = UDim2.new(1, -20, 0, 25)
+notifTitle.Position = UDim2.new(0, 10, 0, 5)
+notifTitle.BackgroundTransparency = 1
+notifTitle.Text = "SyrixHub"
+notifTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+notifTitle.TextSize = 16
+notifTitle.Font = Enum.Font.GothamBold
+notifTitle.TextXAlignment = Enum.TextXAlignment.Left
+notifTitle.Parent = notificationFrame
+
+local notifSubtitle = Instance.new("TextLabel")
+notifSubtitle.Name = "Subtitle"
+notifSubtitle.Size = UDim2.new(1, -20, 0, 20)
+notifSubtitle.Position = UDim2.new(0, 10, 0, 30)
+notifSubtitle.BackgroundTransparency = 1
+notifSubtitle.Text = "SyrixHub loaded\nCredits: @syrixscripts"
+notifSubtitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+notifSubtitle.TextSize = 12
+notifSubtitle.Font = Enum.Font.Gotham
+notifSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+notifSubtitle.TextWrapped = true
+notifSubtitle.Parent = notificationFrame
+
+-- Show notification with smooth animation
+task.spawn(function()
+    wait(2.7) -- Wait for loading to finish
+    
+    -- Slide in from right
+    local slideIn = TweenService:Create(notificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(1, -320, 0, 20)})
+    notificationFrame.BackgroundTransparency = 0
+    slideIn:Play()
+    slideIn.Completed:Wait()
+    
+    wait(2)
+    
+    -- Slide out
+    local slideOut = TweenService:Create(notificationFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 20, 0, 20), BackgroundTransparency = 1})
+    slideOut:Play()
+    slideOut.Completed:Wait()
+    
+    notificationFrame:Destroy()
+end)
+
+-- ============================================
+-- MAIN UI
+-- ============================================
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 550, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BackgroundTransparency = 1
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+-- Main UI Corner
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 16)
+mainCorner.Parent = mainFrame
+
+-- Main UI Stroke
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(80, 80, 120)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.3
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+mainStroke.Parent = mainFrame
+
+-- Drop shadow effect
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.Size = UDim2.new(1, 40, 1, 40)
+shadow.Position = UDim2.new(0, -20, 0, -20)
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxassetid://6015897843"
+shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+shadow.ImageTransparency = 0.5
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(49, 49, 450, 450)
+shadow.Parent = mainFrame
+
+-- Gradient background
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))
 })
+gradient.Rotation = 45
+gradient.Parent = mainFrame
 
-Window.ShowWindowButton = false
+-- Title Bar
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
 
--- ==================== UTILITY ====================
-local function Notify(title, content, duration)
-   Rayfield:Notify({
-      Title = title,
-      Content = content,
-      Duration = duration or 2.5,
-      Image = 4483362458,
-   })
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 16)
+titleCorner.Parent = titleBar
+
+-- Fix bottom corners
+local titleBottomFix = Instance.new("Frame")
+titleBottomFix.Size = UDim2.new(1, 0, 0.5, 0)
+titleBottomFix.Position = UDim2.new(0, 0, 0.5, 0)
+titleBottomFix.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+titleBottomFix.BorderSizePixel = 0
+titleBottomFix.Parent = titleBar
+
+-- Title Text
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(0.5, 0, 1, 0)
+titleText.Position = UDim2.new(0, 15, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "SyrixHub"
+titleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleText.TextSize = 18
+titleText.Font = Enum.Font.GothamBold
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Parent = titleBar
+
+-- Title gradient
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 255))
+})
+titleGradient.Parent = titleText
+
+-- Control buttons container
+local controlsFrame = Instance.new("Frame")
+controlsFrame.Size = UDim2.new(0, 100, 0, 30)
+controlsFrame.Position = UDim2.new(1, -110, 0, 5)
+controlsFrame.BackgroundTransparency = 1
+controlsFrame.Parent = titleBar
+
+-- Discord button
+local discordButton = Instance.new("TextButton")
+discordButton.Name = "Discord"
+discordButton.Size = UDim2.new(0, 28, 0, 28)
+discordButton.Position = UDim2.new(0, 0, 0, 0)
+discordButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+discordButton.BackgroundTransparency = 0.3
+discordButton.Text = "🌐"
+discordButton.TextSize = 14
+discordButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+discordButton.BorderSizePixel = 0
+discordButton.AutoButtonColor = false
+discordButton.Parent = controlsFrame
+
+local discordCorner = Instance.new("UICorner")
+discordCorner.CornerRadius = UDim.new(0, 6)
+discordCorner.Parent = discordButton
+
+discordButton.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(DISCORD_INVITE)
+    end
+    -- Visual feedback
+    local flash = TweenService:Create(discordButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+    flash:Play()
+    flash.Completed:Wait()
+    local unflash = TweenService:Create(discordButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.3})
+    unflash:Play()
+end)
+
+-- Minimize button
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Name = "Minimize"
+minimizeButton.Size = UDim2.new(0, 28, 0, 28)
+minimizeButton.Position = UDim2.new(0, 32, 0, 0)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+minimizeButton.BackgroundTransparency = 0.3
+minimizeButton.Text = "-"
+minimizeButton.TextSize = 18
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.BorderSizePixel = 0
+minimizeButton.AutoButtonColor = false
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.Parent = controlsFrame
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 6)
+minCorner.Parent = minimizeButton
+
+local isMinimized = false
+minimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        -- Minimize animation
+        local minimize = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 550, 0, 40)})
+        minimize:Play()
+    else
+        -- Maximize animation
+        local maximize = TweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 550, 0, 400)})
+        maximize:Play()
+    end
+end)
+
+-- Close button
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "Close"
+closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Position = UDim2.new(0, 64, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+closeButton.BackgroundTransparency = 0.3
+closeButton.Text = "X"
+closeButton.TextSize = 14
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.BorderSizePixel = 0
+closeButton.AutoButtonColor = false
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = controlsFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeButton
+
+closeButton.MouseButton1Click:Connect(function()
+    -- Close animation
+    local shrink = TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)})
+    shrink:Play()
+    shrink.Completed:Wait()
+    screenGui:Destroy()
+end)
+
+-- Button hover effects
+local function addHoverEffects(button, defaultTransparency)
+    button.MouseEnter:Connect(function()
+        local hover = TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = defaultTransparency - 0.2})
+        hover:Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        local leave = TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = defaultTransparency})
+        leave:Play()
+    end)
 end
 
-local function PressKey(keyCode)
-   pcall(function()
-      VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-      task.wait(0.05)
-      VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
-   end)
+addHoverEffects(discordButton, 0.3)
+addHoverEffects(minimizeButton, 0.3)
+addHoverEffects(closeButton, 0.3)
+
+-- ============================================
+-- SIDE NAVIGATION
+-- ============================================
+
+local sideNav = Instance.new("Frame")
+sideNav.Name = "SideNav"
+sideNav.Size = UDim2.new(0, 140, 1, -40)
+sideNav.Position = UDim2.new(0, 0, 0, 40)
+sideNav.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+sideNav.BorderSizePixel = 0
+sideNav.Parent = mainFrame
+
+local sideNavCorner = Instance.new("UICorner")
+sideNavCorner.CornerRadius = UDim.new(0, 0)
+sideNavCorner.Parent = sideNav
+
+-- Navigation buttons
+local navButtons = {}
+local sections = {"Social", "Settings", "Main Farm"}
+local currentSection = nil
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -140, 1, -40)
+contentFrame.Position = UDim2.new(0, 140, 0, 40)
+contentFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+contentFrame.BorderSizePixel = 0
+contentFrame.Parent = mainFrame
+
+-- Create section pages
+local socialPage = Instance.new("ScrollingFrame")
+socialPage.Size = UDim2.new(1, -20, 1, -20)
+socialPage.Position = UDim2.new(0, 10, 0, 10)
+socialPage.BackgroundTransparency = 1
+socialPage.ScrollBarThickness = 4
+socialPage.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+socialPage.CanvasSize = UDim2.new(0, 0, 0, 200)
+socialPage.Visible = false
+socialPage.Parent = contentFrame
+
+local settingsPage = Instance.new("ScrollingFrame")
+settingsPage.Size = UDim2.new(1, -20, 1, -20)
+settingsPage.Position = UDim2.new(0, 10, 0, 10)
+settingsPage.BackgroundTransparency = 1
+settingsPage.ScrollBarThickness = 4
+settingsPage.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+settingsPage.CanvasSize = UDim2.new(0, 0, 0, 350)
+settingsPage.Visible = false
+settingsPage.Parent = contentFrame
+
+local mainFarmPage = Instance.new("ScrollingFrame")
+mainFarmPage.Size = UDim2.new(1, -20, 1, -20)
+mainFarmPage.Position = UDim2.new(0, 10, 0, 10)
+mainFarmPage.BackgroundTransparency = 1
+mainFarmPage.ScrollBarThickness = 4
+mainFarmPage.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
+mainFarmPage.CanvasSize = UDim2.new(0, 0, 0, 500)
+mainFarmPage.Visible = false
+mainFarmPage.Parent = contentFrame
+
+-- Create nav buttons with smooth animations
+for i, sectionName in ipairs(sections) do
+    local navButton = Instance.new("TextButton")
+    navButton.Name = sectionName
+    navButton.Size = UDim2.new(1, -20, 0, 35)
+    navButton.Position = UDim2.new(0, 10, 0, 10 + (i - 1) * 45)
+    navButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    navButton.BackgroundTransparency = 0.5
+    navButton.Text = sectionName
+    navButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    navButton.TextSize = 14
+    navButton.Font = Enum.Font.GothamSemibold
+    navButton.BorderSizePixel = 0
+    navButton.AutoButtonColor = false
+    navButton.Parent = sideNav
+    
+    local navCorner = Instance.new("UICorner")
+    navCorner.CornerRadius = UDim.new(0, 8)
+    navCorner.Parent = navButton
+    
+    local navGradient = Instance.new("UIGradient")
+    navGradient.Parent = navButton
+    
+    -- Selection indicator
+    local indicator = Instance.new("Frame")
+    indicator.Name = "Indicator"
+    indicator.Size = UDim2.new(0, 3, 0.6, 0)
+    indicator.Position = UDim2.new(0, -10, 0.2, 0)
+    indicator.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+    indicator.BorderSizePixel = 0
+    indicator.BackgroundTransparency = 1
+    indicator.Parent = navButton
+    
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(0, 2)
+    indicatorCorner.Parent = indicator
+    
+    navButton.MouseButton1Click:Connect(function()
+        if currentSection == sectionName then return end
+        currentSection = sectionName
+        
+        -- Hide all pages with fade out
+        for _, page in ipairs({socialPage, settingsPage, mainFarmPage}) do
+            if page.Visible then
+                local fadeOut = TweenService:Create(page, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, Position = UDim2.new(0, 30, 0, 10)})
+                fadeOut:Play()
+                fadeOut.Completed:Wait()
+                page.Visible = false
+            end
+        end
+        
+        -- Show selected page with fade in
+        local selectedPage
+        if sectionName == "Social" then
+            selectedPage = socialPage
+        elseif sectionName == "Settings" then
+            selectedPage = settingsPage
+        elseif sectionName == "Main Farm" then
+            selectedPage = mainFarmPage
+        end
+        
+        selectedPage.Position = UDim2.new(0, 30, 0, 10)
+        selectedPage.Visible = true
+        local fadeIn = TweenService:Create(selectedPage, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 10, 0, 10)})
+        fadeIn:Play()
+        
+        -- Update button styles
+        for _, btn in ipairs(navButtons) do
+            local resetStyle = TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.5})
+            resetStyle:Play()
+            local resetIndicator = TweenService:Create(btn.Indicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+            resetIndicator:Play()
+        end
+        
+        local activeStyle = TweenService:Create(navButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2})
+        activeStyle:Play()
+        local showIndicator = TweenService:Create(indicator, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+        showIndicator:Play()
+    end)
+    
+    table.insert(navButtons, navButton)
 end
 
--- Tween character to a position
-local function TweenTo(targetPos, duration)
-   duration = duration or 1.5
-   local goal = {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))}
-   local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-   local tween = TweenService:Create(HumanoidRootPart, tweenInfo, goal)
-   tween:Play()
-   tween.Completed:Wait()
-end
+-- ============================================
+-- SOCIAL PAGE CONTENT
+-- ============================================
 
--- Get closest NPC matching a name keyword
-local function FindNPC(keyword)
-   local workspace = game:GetService("Workspace")
-   local closest = nil
-   local closestDist = math.huge
+local socialTitle = Instance.new("TextLabel")
+socialTitle.Size = UDim2.new(1, 0, 0, 30)
+socialTitle.Position = UDim2.new(0, 0, 0, 10)
+socialTitle.BackgroundTransparency = 1
+socialTitle.Text = "SyrixHub"
+socialTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+socialTitle.TextSize = 24
+socialTitle.Font = Enum.Font.GothamBold
+socialTitle.TextXAlignment = Enum.TextXAlignment.Center
+socialTitle.Parent = socialPage
 
-   -- Bloxfruits NPCs live inside Workspace.Map or Workspace directly
-   local searchFolders = {workspace}
-   pcall(function()
-      if workspace:FindFirstChild("Map") then
-         table.insert(searchFolders, workspace.Map)
-      end
-   end)
+local creatorLabel = Instance.new("TextLabel")
+creatorLabel.Size = UDim2.new(1, 0, 0, 20)
+creatorLabel.Position = UDim2.new(0, 0, 0, 45)
+creatorLabel.BackgroundTransparency = 1
+creatorLabel.Text = "Created By @syrixscripts"
+creatorLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+creatorLabel.TextSize = 14
+creatorLabel.Font = Enum.Font.Gotham
+creatorLabel.TextXAlignment = Enum.TextXAlignment.Center
+creatorLabel.Parent = socialPage
 
-   for _, folder in ipairs(searchFolders) do
-      for _, obj in ipairs(folder:GetDescendants()) do
-         if obj:IsA("Model") and obj.Name:lower():find(keyword:lower()) then
-            local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso")
-            local hum  = obj:FindFirstChildOfClass("Humanoid")
-            if root and hum and hum.Health > 0 then
-               local dist = (HumanoidRootPart.Position - root.Position).Magnitude
-               if dist < closestDist then
-                  closestDist = dist
-                  closest = obj
-               end
-            end
-         end
-      end
-   end
-   return closest
-end
-
--- Parse quest target NPC name from the quest board/active quest
-local function GetActiveQuestTarget()
-   local target = nil
-   pcall(function()
-      -- Bloxfruits stores active quest info in PlayerGui or ReplicatedStorage
-      local questGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
-         or LocalPlayer.PlayerGui:FindFirstChild("Quest")
-      if questGui then
-         for _, label in ipairs(questGui:GetDescendants()) do
-            if label:IsA("TextLabel") and label.Text:lower():find("kill") then
-               -- extract NPC name from "Kill X <NpcName>" pattern
-               local name = label.Text:match("[Kk]ill%s+%d+%s+(.+)")
-               if name then
-                  target = name:gsub("%s+$", "")
-               end
-            end
-         end
-      end
-   end)
-   return target
-end
-
--- Take quest from nearest quest giver NPC
-local function TakeNearestQuest()
-   pcall(function()
-      local workspace = game:GetService("Workspace")
-      local questNPCs = {"Quest", "Fist", "Sword", "Pirate", "Marine"}
-
-      for _, keyword in ipairs(questNPCs) do
-         local npc = FindNPC(keyword)
-         if npc then
-            local root = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso")
-            if root then
-               TweenTo(root.Position, 1)
-               task.wait(0.5)
-               -- Interact with quest NPC via click detector or remote
-               local clickDetector = npc:FindFirstChildOfClass("ClickDetector")
-                  or npc:FindFirstChild("Head") and npc.Head:FindFirstChildOfClass("ClickDetector")
-               if clickDetector then
-                  fireClickDetector(clickDetector)
-                  task.wait(0.3)
-               end
-               -- Fire the quest accept remote
-               local remotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
-               if remotes then
-                  local questRemote = remotes:FindFirstChild("CommF_")
-                     or remotes:FindFirstChild("QuestRemote")
-                  if questRemote then
-                     pcall(function() questRemote:InvokeServer("StartQuest", npc) end)
-                     pcall(function() questRemote:FireServer("StartQuest", npc) end)
-                  end
-               end
-               break
-            end
-         end
-      end
-   end)
-end
-
--- Melee attack loop against target NPC
-local function MeleeAttack(targetModel)
-   if not targetModel then return end
-   local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel:FindFirstChild("Torso")
-   local hum  = targetModel:FindFirstChildOfClass("Humanoid")
-   if not root or not hum or hum.Health <= 0 then return end
-
-   -- Walk/tween close
-   local dist = (HumanoidRootPart.Position - root.Position).Magnitude
-   if dist > 6 then
-      TweenTo(root.Position, math.clamp(dist / 20, 0.3, 1.2))
-   end
-
-   -- Face target
-   HumanoidRootPart.CFrame = CFrame.lookAt(HumanoidRootPart.Position, root.Position)
-
-   -- Swing melee (Z is default melee in Bloxfruits)
-   PressKey(Enum.KeyCode.Z)
-   task.wait(0.1)
-
-   -- Also try clicking (default attack)
-   pcall(function()
-      VirtualInputManager:SendMouseButtonEvent(
-         Mouse.X, Mouse.Y, 0, true, game, 1
-      )
-      task.wait(0.05)
-      VirtualInputManager:SendMouseButtonEvent(
-         Mouse.X, Mouse.Y, 0, false, game, 1
-      )
-   end)
-end
-
--- ==================== MAIN AUTO FARM LOOP ====================
-local function AutoFarmLoop()
-   while State.AutoFarm do
-      pcall(function()
-         -- 1. Get current quest target name
-         local questTarget = GetActiveQuestTarget()
-
-         -- 2. If no active quest, try to take one
-         if not questTarget then
-            TakeNearestQuest()
-            task.wait(2)
-            questTarget = GetActiveQuestTarget()
-         end
-
-         -- 3. Find and kill target NPC
-         if questTarget then
-            local npc = FindNPC(questTarget)
-            if npc then
-               local hum = npc:FindFirstChildOfClass("Humanoid")
-               -- Attack until dead
-               while npc and hum and hum.Health > 0 and State.AutoFarm do
-                  MeleeAttack(npc)
-                  task.wait(0.3 / 1.3) -- 1.3x attack speed
-               end
-            else
-               task.wait(1)
-            end
-         else
-            task.wait(2)
-         end
-      end)
-
-      task.wait(0.1)
-   end
-end
-
--- ==================== HOME TAB ====================
-local HomeTab = Window:CreateTab("Home", 0)
-HomeTab:CreateSection("Welcome to SyrixHub")
-HomeTab:CreateLabel("Made by @syrixscripts")
-HomeTab:CreateDivider()
-HomeTab:CreateLabel("Select a tab above to get started")
-
--- ==================== MAIN FARM TAB ====================
-local MainFarmTab = Window:CreateTab("Main Farm", 1)
-MainFarmTab:CreateSection("Auto Farm")
-
-MainFarmTab:CreateToggle({
-   Name = "Auto Farm",
-   CurrentValue = false,
-   Flag = "AutoFarm",
-   Callback = function(Value)
-      State.AutoFarm = Value
-      if Value then
-         Notify("Auto Farm", "Enabled - detecting quest and farming", 2.5)
-         task.spawn(AutoFarmLoop)
-      else
-         Notify("Auto Farm", "Disabled", 2)
-      end
-   end,
-})
-
-MainFarmTab:CreateDivider()
-MainFarmTab:CreateSection("Farming")
-
-MainFarmTab:CreateToggle({
-   Name = "Auto Farm Level",
-   CurrentValue = false,
-   Flag = "AutoFarmLevel",
-   Callback = function(Value)
-      State.AutoFarmLevel = Value
-      if Value then
-         Notify("Auto Farm Level", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoFarmLevel do
-               task.wait(0.1)
-            end
-         end)
-      else
-         Notify("Auto Farm Level", "Disabled", 2)
-      end
-   end,
-})
-
-MainFarmTab:CreateSection("Quest")
-
-MainFarmTab:CreateToggle({
-   Name = "Auto Take Quest",
-   CurrentValue = false,
-   Flag = "AutoTakeQuest",
-   Callback = function(Value)
-      State.AutoTakeQuest = Value
-      if Value then
-         Notify("Auto Take Quest", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoTakeQuest do
-               TakeNearestQuest()
-               task.wait(5)
-            end
-         end)
-      else
-         Notify("Auto Take Quest", "Disabled", 2)
-      end
-   end,
-})
-
-MainFarmTab:CreateLabel("Auto takes quest between grinding")
-MainFarmTab:CreateDivider()
-MainFarmTab:CreateSection("Bones")
-
-MainFarmTab:CreateToggle({
-   Name = "Auto Bones",
-   CurrentValue = false,
-   Flag = "AutoBones",
-   Callback = function(Value)
-      State.AutoBones = Value
-      if Value then
-         Notify("Auto Bones", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoBones do
-               task.wait(0.1)
-            end
-         end)
-      else
-         Notify("Auto Bones", "Disabled", 2)
-      end
-   end,
-})
-
--- ==================== SUB FARM TAB ====================
-local SubFarmTab = Window:CreateTab("Sub Farm", 2)
-SubFarmTab:CreateSection("Sub Farm")
-SubFarmTab:CreateLabel("Sub Farm features coming soon")
-
--- ==================== QUEST/ITEMS TAB ====================
-local QuestItemsTab = Window:CreateTab("Quest/Items", 3)
-QuestItemsTab:CreateSection("Quest and Items")
-QuestItemsTab:CreateLabel("Quest and Items features coming soon")
-
--- ==================== SETTINGS TAB ====================
-local SettingsTab = Window:CreateTab("Settings", 5)
-SettingsTab:CreateSection("Interface")
-
--- GUI Scale — adjusts Rayfield's actual ScreenGui scale
-SettingsTab:CreateSlider({
-   Name = "GUI Scale",
-   Range = {50, 150},
-   Increment = 5,
-   Suffix = "%",
-   CurrentValue = 100,
-   Flag = "UIScale",
-   Callback = function(Value)
-      pcall(function()
-         local scale = Value / 100
-         -- Find Rayfield ScreenGui and apply UIScale
-         for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and (gui.Name:find("Rayfield") or gui.Name:find("SyrixHub")) then
-               local uiScale = gui:FindFirstChildOfClass("UIScale")
-               if not uiScale then
-                  uiScale = Instance.new("UIScale", gui)
-               end
-               -- Smooth tween the scale
-               TweenService:Create(
-                  uiScale,
-                  TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                  {Scale = scale}
-               ):Play()
-            end
-         end
-      end)
-   end,
-})
-
-SettingsTab:CreateDivider()
-SettingsTab:CreateSection("Key Systems")
-
-SettingsTab:CreateToggle({
-   Name = "Auto V3",
-   CurrentValue = false,
-   Flag = "AutoV3",
-   Callback = function(Value)
-      State.AutoV3 = Value
-      if Value then
-         Notify("Auto V3", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoV3 do
-               PressKey(Enum.KeyCode.T)
-               local elapsed = 0
-               while elapsed < 30 and State.AutoV3 do
-                  task.wait(0.5)
-                  elapsed = elapsed + 0.5
-               end
-            end
-         end)
-      else
-         Notify("Auto V3", "Disabled", 2)
-      end
-   end,
-})
-
-SettingsTab:CreateToggle({
-   Name = "Auto Observation",
-   CurrentValue = false,
-   Flag = "AutoObservation",
-   Callback = function(Value)
-      State.AutoObservation = Value
-      if Value then
-         Notify("Auto Observation", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoObservation do
-               PressKey(Enum.KeyCode.E)
-               local elapsed = 0
-               while elapsed < 5 and State.AutoObservation do
-                  task.wait(0.1)
-                  elapsed = elapsed + 0.1
-               end
-            end
-         end)
-      else
-         Notify("Auto Observation", "Disabled", 2)
-      end
-   end,
-})
-
-SettingsTab:CreateToggle({
-   Name = "Auto V4",
-   CurrentValue = false,
-   Flag = "AutoV4",
-   Callback = function(Value)
-      State.AutoV4 = Value
-      if Value then
-         Notify("Auto V4", "Enabled", 2)
-         task.spawn(function()
-            while State.AutoV4 do
-               task.wait(0.1)
-            end
-         end)
-      else
-         Notify("Auto V4", "Disabled", 2)
-      end
-   end,
-})
-
--- ==================== SOCIALS TAB ====================
-local SocialsTab = Window:CreateTab("Socials", 4934561911)
-SocialsTab:CreateSection("Socials")
-
-SocialsTab:CreateButton({
-   Name = "Discord Server",
-   Callback = function()
-      setclipboard("https://discord.gg/Tds6abWdK")
-      Notify("Copied", "Discord link copied to clipboard", 2.5)
-   end,
-})
-
-SocialsTab:CreateDivider()
-SocialsTab:CreateSection("Credits")
-
-SocialsTab:CreateButton({
-   Name = "Made by @syrixscripts",
-   Callback = function()
-      setclipboard("@syrixscripts")
-      Notify("Copied", "@syrixscripts copied to clipboard", 2)
-   end,
-})
-
-SocialsTab:CreateLabel("Made by @syrixscripts")
-
--- ==================== LOAD ====================
-task.wait(0.5)
-Notify("SyrixHub", "Welcome to SyrixHub - Bloxfruits", 3)
-print("[SyrixHub] Loaded")
+local discordSocialButton = Instance.new("TextButton")
+discordSocialButton.Size = UDim2.new(0.7, 0, 0, 40)
+discordSocialButton.Position = UDim2.new(0.15, 0, 0, 80)
+discordSocialButton.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+discordSocialButton.BackgroundTransparency = 0.2
+discordSocialButton.Text = "Join Discord"
+discordSocialButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+discordSocialButton.TextSize = 16
+discordSocialButton.Font = Enum.Font.GothamBold
+discordSocialButton.BorderSizePixel = 0
+discordSocialB
